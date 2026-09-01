@@ -1,5 +1,6 @@
 import jwt, { JwtPayload } from 'jsonwebtoken';
-import cache from '@/shared-libs/utils/cache.util';
+// import cache from '@/shared-libs/utils/cache.util'; // ponytail: sementara pakai memory-cache (tanpa Redis)
+import cache from '@/utils/memory-cache.util';
 import { Request, Response, NextFunction } from 'express';
 import { HTTP_MESSAGE } from '@/shared-libs/constants/http-status.constant';
 import SecretManager from '@/shared-libs/utils/secret-manager.util';
