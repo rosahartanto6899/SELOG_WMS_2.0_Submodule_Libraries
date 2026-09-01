@@ -1,0 +1,30 @@
+# Source files
+*.ts
+!*.d.ts
+
+# Config files
+tsconfig.json
+.gitignore
+
+# Development files
+.vscode/
+.idea/
+
+# Tests
+**/*.test.ts
+**/*.spec.ts
+
+# Documentation
+docs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Only include dist and essential files
+!dist/**/*
+!README.md
+!package.json
