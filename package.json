@@ -1,0 +1,112 @@
+{
+  "name": "@selog/wms-shared-libraries",
+  "version": "1.0.0",
+  "description": "Shared libraries for SELOG WMS applications including base classes, exceptions, helpers, interfaces, and middlewares",
+  "main": "index.ts",
+  "types": "index.ts",
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "clean": "rimraf dist",
+    "prebuild": "npm run clean",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "selog",
+    "wms",
+    "shared",
+    "libraries",
+    "typescript",
+    "exceptions",
+    "middleware",
+    "helpers"
+  ],
+  "author": "Developer Serasi Autoraya",
+  "license": "UNLICENSED",
+  "private": true,
+  "files": [
+    "dist/**/*",
+    "README.md"
+  ],
+  "devDependencies": {
+    "typescript": "^5.2.2",
+    "rimraf": "^5.0.5",
+    "@types/node": "^20.8.0",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.5",
+    "express": "^4.18.0",
+    "class-transformer": "^0.5.0",
+    "class-validator": "^0.14.0",
+    "jsonwebtoken": "^9.0.0"
+  },
+  "dependencies": {
+    "tslib": "^2.6.2",
+    "long": "^5.2.3"
+  },
+  "peerDependencies": {
+    "express": "^4.18.0",
+    "class-transformer": "^0.5.0",
+    "class-validator": "^0.14.0",
+    "jsonwebtoken": "^9.0.0",
+    "axios": "^1.7.0"
+  },
+  "peerDependenciesMeta": {
+    "express": {
+      "optional": true
+    },
+    "class-transformer": {
+      "optional": true
+    },
+    "class-validator": {
+      "optional": true
+    },
+    "jsonwebtoken": {
+      "optional": true
+    },
+    "axios": {
+      "optional": true
+    }
+  },
+  "exports": {
+    ".": {
+      "import": "./index.ts",
+      "require": "./index.ts",
+      "types": "./index.ts"
+    },
+    "./base": {
+      "import": "./base/index.ts",
+      "require": "./base/index.ts",
+      "types": "./base/index.ts"
+    },
+    "./constants": {
+      "import": "./constants/index.ts",
+      "require": "./constants/index.ts",
+      "types": "./constants/index.ts"
+    },
+    "./exceptions": {
+      "import": "./exceptions/index.ts",
+      "require": "./exceptions/index.ts",
+      "types": "./exceptions/index.ts"
+    },
+    "./helpers": {
+      "import": "./helpers/index.ts",
+      "require": "./helpers/index.ts",
+      "types": "./helpers/index.ts"
+    },
+    "./interfaces": {
+      "import": "./interfaces/index.ts",
+      "require": "./interfaces/index.ts",
+      "types": "./interfaces/index.ts"
+    },
+    "./middlewares": {
+      "import": "./middlewares/index.ts",
+      "require": "./middlewares/index.ts",
+      "types": "./middlewares/index.ts"
+    },
+    "./utils/outbound": {
+      "import": "./utils/outbound/index.ts",
+      "require": "./utils/outbound/index.ts",
+      "types": "./utils/outbound/index.ts"
+    }
+  }
+}
