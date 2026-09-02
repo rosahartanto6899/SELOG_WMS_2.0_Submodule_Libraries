@@ -1,6 +1,4 @@
 import jwt, { JwtPayload } from 'jsonwebtoken';
-// import cache from '@/shared-libs/utils/cache.util'; // ponytail: sementara pakai memory-cache (tanpa Redis)
-import cache from '@/utils/memory-cache.util';
 import { Request, Response, NextFunction } from 'express';
 import { HTTP_MESSAGE } from '@/shared-libs/constants/http-status.constant';
 import SecretManager from '@/shared-libs/utils/secret-manager.util';
@@ -13,7 +11,22 @@ import { customerAuthRoutes } from '@/shared-libs/constants/customer-auth.consta
 import { noAuthRoutes } from '@/shared-libs/constants/no-auth.constant';
 interface CustomJwtPayload extends JwtPayload {
   type?: string;
+  email?: string;
+  name?: string;
+  role?: string;
+  roles?: any[];
+  menus?: any[];
+  customerId?: string | null;
+  phone?: string;
+  contactId?: string;
+  cmd?: string;
+  drivervkvd?: string;
+  driverShipmentId?: string;
 }
+
+// ponytail: verifikasi JWT stateless — tanpa cache/Redis. Identitas dibaca dari
+// klaim token yang diterbitkan ServiceUser (signature diverifikasi di sini).
+// Konsekuensi: token tidak bisa dicabut sebelum expired.
 
 const dynamicRoutes = [/^\/v1\/register\/activation\/[^/?]+(\?.*)?$/]; // '/v1/register/activation/:token'
 
@@ -168,12 +181,10 @@ export async function VerifyJWT(
       token = encryptedToken;
     }
 
-    const [tokenBlacklist, decodedToken] = await Promise.all([
-      cache.get<{ token: string }>(`tokenBlacklist:${token}`),
-      Promise.resolve(
-        jwt.verify(token, SecretManager.env.JWT_SECRET) as CustomJwtPayload,
-      ),
-    ]);
+    const decodedToken = jwt.verify(
+      token,
+      SecretManager.env.JWT_SECRET,
+    ) as CustomJwtPayload;
 
     if (decodedToken.type === 'refresh') {
       return handleUnauthorizedResponse(req, res);
@@ -185,7 +196,7 @@ export async function VerifyJWT(
     );
 
     if (driverRoute) {
-      await handleDriverAuthentication(decodedToken, req, res, tokenBlacklist);
+      handleDriverAuthentication(decodedToken, req);
 
       return next();
     }
@@ -195,23 +206,12 @@ export async function VerifyJWT(
     );
 
     if (customerRoute) {
-      await handleCustomerAuthentication(
-        decodedToken,
-        req,
-        res,
-        tokenBlacklist,
-      );
+      handleCustomerAuthentication(decodedToken, req);
 
       return next();
     }
 
-    await handleUserAuthentication(
-      decodedToken,
-      encryptedToken,
-      req,
-      res,
-      tokenBlacklist,
-    );
+    handleUserAuthentication(decodedToken, req);
 
     next();
   } catch (error) {
@@ -220,97 +220,42 @@ export async function VerifyJWT(
   }
 }
 
-async function handleUserAuthentication(
-  decodedToken: CustomJwtPayload,
-  encryptedToken: string,
-  req: Request,
-  res: Response,
-  tokenBlacklist: { token: string } | null,
-) {
-  // Use encrypted token for Redis lookup since that's how we stored it
-  const tokenAccess = await cache.get<{
-    id: string;
-    role: string;
-    email: string;
-    token: string;
-    name: string;
-    roles: any[];
-    customerId?: string | null;
-    menus?: any[]; // Add menus to the expected structure
-  }>(`tokenAccess:${decodedToken.sub}`);
-
-  if (tokenBlacklist || tokenAccess?.token !== encryptedToken) {
-    return handleUnauthorizedResponse(req, res);
-  }
+// Identitas sepenuhnya dari klaim JWT terverifikasi — tanpa lookup cache.
+function handleUserAuthentication(decodedToken: CustomJwtPayload, req: Request) {
+  const authHeader = req.headers['authorization'];
 
   req.user = {
-    tokenUserId: tokenAccess.id,
-    tokenRole: tokenAccess.role,
-    tokenEmail: tokenAccess.email,
-    tokenRoles: tokenAccess.roles,
-    tokenName: tokenAccess.name,
-    tokenCustomerId: tokenAccess.customerId ?? null,
-    menus: tokenAccess.menus || [], // Include menus from cache
-    token: req.headers['authorization'],
+    tokenUserId: decodedToken.sub ?? '',
+    tokenRole: decodedToken.role ?? '',
+    tokenEmail: decodedToken.email ?? '',
+    tokenRoles: decodedToken.roles ?? [],
+    tokenName: decodedToken.name ?? '',
+    tokenCustomerId: decodedToken.customerId ?? null,
+    menus: decodedToken.menus ?? [],
+    token: authHeader,
   };
 }
 
-async function handleDriverAuthentication(
-  decodedToken: CustomJwtPayload,
-  req: Request,
-  res: Response,
-  tokenBlacklist: { token: string } | null,
-) {
-  const tokenAccess = await cache.get<{
-    driverId: string;
-    driverName: string;
-    driverEmail: string;
-    driverPhone: string;
-    drivervkvd: string;
-    driverShipmentId: string;
-  }>(`driverTokenAccess:${decodedToken.sub}`);
-
-  if (tokenBlacklist || !tokenAccess) {
-    return handleUnauthorizedResponse(req, res);
-  }
-
+function handleDriverAuthentication(decodedToken: CustomJwtPayload, req: Request) {
   req.driver = {
-    driverId: tokenAccess.driverId,
-    driverName: tokenAccess.driverName,
-    driverEmail: tokenAccess.driverEmail,
-    driverPhone: tokenAccess.driverPhone,
-    drivervkvd: tokenAccess.drivervkvd,
-    driverShipmentId: tokenAccess.driverShipmentId,
+    driverId: decodedToken.sub ?? '',
+    driverName: decodedToken.name ?? '',
+    driverEmail: decodedToken.email ?? '',
+    driverPhone: decodedToken.phone ?? '',
+    drivervkvd: decodedToken.drivervkvd ?? '',
+    driverShipmentId: decodedToken.driverShipmentId ?? '',
     token: req.headers['authorization'],
   };
 }
 
-async function handleCustomerAuthentication(
-  decodedToken: CustomJwtPayload,
-  req: Request,
-  res: Response,
-  tokenBlacklist: { token: string } | null,
-) {
-  const tokenAccess = await cache.get<{
-    customerId: string;
-    contactId: string;
-    mobilePhone: string;
-    contactName: string;
-    cmd: string;
-    name: string;
-  }>(`customerTokenAccess:${decodedToken.sub}`);
-
-  if (tokenBlacklist || !tokenAccess) {
-    return handleUnauthorizedResponse(req, res);
-  }
-
+function handleCustomerAuthentication(decodedToken: CustomJwtPayload, req: Request) {
   req.customer = {
-    customerId: tokenAccess.customerId,
-    contactId: tokenAccess.contactId,
-    mobilePhone: tokenAccess.mobilePhone,
-    contactName: tokenAccess.contactName,
-    cmd: tokenAccess.cmd,
-    name: tokenAccess.name,
+    customerId: decodedToken.customerId ?? decodedToken.sub ?? '',
+    contactId: decodedToken.contactId ?? '',
+    mobilePhone: decodedToken.phone ?? '',
+    contactName: decodedToken.name ?? '',
+    cmd: decodedToken.cmd ?? '',
+    name: decodedToken.name ?? '',
     token: req.headers['authorization'],
   };
 }

@@ -59,9 +59,10 @@ export function authorizeBranchScope({
     }
   }
 
-  if (allowedBranches.size === 0) {
-    throw new BadRequestException('You do not have access to any branch');
-  }
+  // TODO: enable again after branch data is ready in master data
+  // if (allowedBranches.size === 0) {
+  //   throw new BadRequestException('You do not have access to any branch');
+  // }
 
   let finalBranchIds: string[];
 

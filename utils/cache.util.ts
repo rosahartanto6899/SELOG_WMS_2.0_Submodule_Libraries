@@ -1,4 +1,5 @@
 import { RedisCache } from '@/integrations/thrid-party/redis.third';
+import { MemoryCache } from '@/utils/memory-cache.util';
 import { ICache } from '@/shared-libs/interfaces/cache.interface';
 import SecretManager from '@/shared-libs/utils/secret-manager.util';
 import { UTILS_CONSTANT } from '@/shared-libs/constants/utils-service.constant';
@@ -11,6 +12,7 @@ class Cache {
   public static getInstance() {
     const cacheHandlers = {
       redis: () => new RedisCache(),
+      memory: () => MemoryCache,
     };
 
     if (!Cache.instance) {
