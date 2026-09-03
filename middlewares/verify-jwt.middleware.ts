@@ -30,7 +30,6 @@ interface CustomJwtPayload extends JwtPayload {
 
 // Verifikasi JWT + session Redis: tokenBlacklist (logout/rotasi) dan
 // tokenAccess (session aktif per user — login baru menimpa yang lama).
-
 const dynamicRoutes = [/^\/v1\/register\/activation\/[^/?]+(\?.*)?$/]; // '/v1/register/activation/:token'
 
 function handleUnauthorizedResponse(req: Request, res: Response) {
@@ -184,12 +183,10 @@ export async function VerifyJWT(
       token = encryptedToken;
     }
 
-    const [tokenBlacklist, decodedToken] = await Promise.all([
-      cache.get<{ token: string }>(`tokenBlacklist:${token}`),
-      Promise.resolve(
-        jwt.verify(token, SecretManager.env.JWT_SECRET) as CustomJwtPayload,
-      ),
-    ]);
+    const decodedToken = jwt.verify(
+      token,
+      SecretManager.env.JWT_SECRET,
+    ) as CustomJwtPayload;
 
     if (decodedToken.type === 'refresh') {
       return handleUnauthorizedResponse(req, res);
@@ -201,7 +198,7 @@ export async function VerifyJWT(
     );
 
     if (driverRoute) {
-      await handleDriverAuthentication(decodedToken, req, res, tokenBlacklist);
+      handleDriverAuthentication(decodedToken, req);
 
       return next();
     }
@@ -211,23 +208,12 @@ export async function VerifyJWT(
     );
 
     if (customerRoute) {
-      await handleCustomerAuthentication(
-        decodedToken,
-        req,
-        res,
-        tokenBlacklist,
-      );
+      handleCustomerAuthentication(decodedToken, req);
 
       return next();
     }
 
-    await handleUserAuthentication(
-      decodedToken,
-      encryptedToken,
-      req,
-      res,
-      tokenBlacklist,
-    );
+    handleUserAuthentication(decodedToken, req);
 
     next();
   } catch (error) {
@@ -274,62 +260,26 @@ async function handleUserAuthentication(
   };
 }
 
-async function handleDriverAuthentication(
-  decodedToken: CustomJwtPayload,
-  req: Request,
-  res: Response,
-  tokenBlacklist: { token: string } | null,
-) {
-  const tokenAccess = await cache.get<{
-    driverId: string;
-    driverName: string;
-    driverEmail: string;
-    driverPhone: string;
-    drivervkvd: string;
-    driverShipmentId: string;
-  }>(`driverTokenAccess:${decodedToken.sub}`);
-
-  if (tokenBlacklist || !tokenAccess) {
-    return handleUnauthorizedResponse(req, res);
-  }
-
+function handleDriverAuthentication(decodedToken: CustomJwtPayload, req: Request) {
   req.driver = {
-    driverId: tokenAccess.driverId,
-    driverName: tokenAccess.driverName,
-    driverEmail: tokenAccess.driverEmail,
-    driverPhone: tokenAccess.driverPhone,
-    drivervkvd: tokenAccess.drivervkvd,
-    driverShipmentId: tokenAccess.driverShipmentId,
+    driverId: decodedToken.sub ?? '',
+    driverName: decodedToken.name ?? '',
+    driverEmail: decodedToken.email ?? '',
+    driverPhone: decodedToken.phone ?? '',
+    drivervkvd: decodedToken.drivervkvd ?? '',
+    driverShipmentId: decodedToken.driverShipmentId ?? '',
     token: req.headers['authorization'],
   };
 }
 
-async function handleCustomerAuthentication(
-  decodedToken: CustomJwtPayload,
-  req: Request,
-  res: Response,
-  tokenBlacklist: { token: string } | null,
-) {
-  const tokenAccess = await cache.get<{
-    customerId: string;
-    contactId: string;
-    mobilePhone: string;
-    contactName: string;
-    cmd: string;
-    name: string;
-  }>(`customerTokenAccess:${decodedToken.sub}`);
-
-  if (tokenBlacklist || !tokenAccess) {
-    return handleUnauthorizedResponse(req, res);
-  }
-
+function handleCustomerAuthentication(decodedToken: CustomJwtPayload, req: Request) {
   req.customer = {
-    customerId: tokenAccess.customerId,
-    contactId: tokenAccess.contactId,
-    mobilePhone: tokenAccess.mobilePhone,
-    contactName: tokenAccess.contactName,
-    cmd: tokenAccess.cmd,
-    name: tokenAccess.name,
+    customerId: decodedToken.customerId ?? decodedToken.sub ?? '',
+    contactId: decodedToken.contactId ?? '',
+    mobilePhone: decodedToken.phone ?? '',
+    contactName: decodedToken.name ?? '',
+    cmd: decodedToken.cmd ?? '',
+    name: decodedToken.name ?? '',
     token: req.headers['authorization'],
   };
 }
