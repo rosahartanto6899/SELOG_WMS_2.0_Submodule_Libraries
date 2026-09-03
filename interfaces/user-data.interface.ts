@@ -5,6 +5,9 @@ interface IDataUser {
   roles: IDataUserRole[];
   menus: IDataUserMenu[];
   tokenUserId: string;
+  tokenCustomerId?: string | null;
+  tokenCustomerCode?: string | null;
+  tokenCustomerName?: string | null;
   tokenRole: string;
   tokenEmail: string;
   tokenRoles: IDataUserRole[];

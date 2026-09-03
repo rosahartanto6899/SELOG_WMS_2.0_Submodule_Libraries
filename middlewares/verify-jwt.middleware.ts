@@ -9,6 +9,7 @@ import { basicAuthRoutes } from '@/shared-libs/constants/basic-auth.constant';
 import { driverAuthRoutes } from '@/shared-libs/constants/driver-auth.constant';
 import { customerAuthRoutes } from '@/shared-libs/constants/customer-auth.constant';
 import { noAuthRoutes } from '@/shared-libs/constants/no-auth.constant';
+import cache from '@/shared-libs/utils/cache.util';
 interface CustomJwtPayload extends JwtPayload {
   type?: string;
   email?: string;
@@ -17,6 +18,9 @@ interface CustomJwtPayload extends JwtPayload {
   roles?: any[];
   menus?: any[];
   customerId?: string | null;
+  customerCode?: string | null;
+  customerName?: string | null;
+  warehouses?: { warehouseCode: string; warehouseName: string | null }[];
   phone?: string;
   contactId?: string;
   cmd?: string;
@@ -24,10 +28,8 @@ interface CustomJwtPayload extends JwtPayload {
   driverShipmentId?: string;
 }
 
-// ponytail: verifikasi JWT stateless — tanpa cache/Redis. Identitas dibaca dari
-// klaim token yang diterbitkan ServiceUser (signature diverifikasi di sini).
-// Konsekuensi: token tidak bisa dicabut sebelum expired.
-
+// Verifikasi JWT + session Redis: tokenBlacklist (logout/rotasi) dan
+// tokenAccess (session aktif per user — login baru menimpa yang lama).
 const dynamicRoutes = [/^\/v1\/register\/activation\/[^/?]+(\?.*)?$/]; // '/v1/register/activation/:token'
 
 function handleUnauthorizedResponse(req: Request, res: Response) {
@@ -220,19 +222,41 @@ export async function VerifyJWT(
   }
 }
 
-// Identitas sepenuhnya dari klaim JWT terverifikasi — tanpa lookup cache.
-function handleUserAuthentication(decodedToken: CustomJwtPayload, req: Request) {
-  const authHeader = req.headers['authorization'];
+// Identitas dari session Redis (tokenAccess) — sekaligus validasi session aktif.
+async function handleUserAuthentication(
+  decodedToken: CustomJwtPayload,
+  encryptedToken: string,
+  req: Request,
+  res: Response,
+  tokenBlacklist: { token: string } | null,
+) {
+  // Use encrypted token for Redis lookup since that's how we stored it
+  const tokenAccess = await cache.get<{
+    id: string;
+    role: string;
+    email: string;
+    token: string;
+    name: string;
+    roles: any[];
+    customerId?: string | null;
+    menus?: any[];
+    warehouses?: { warehouseCode: string; warehouseName: string | null }[];
+  }>(`tokenAccess:${decodedToken.sub}`);
+
+  if (tokenBlacklist || tokenAccess?.token !== encryptedToken) {
+    return handleUnauthorizedResponse(req, res);
+  }
 
   req.user = {
-    tokenUserId: decodedToken.sub ?? '',
-    tokenRole: decodedToken.role ?? '',
-    tokenEmail: decodedToken.email ?? '',
-    tokenRoles: decodedToken.roles ?? [],
-    tokenName: decodedToken.name ?? '',
-    tokenCustomerId: decodedToken.customerId ?? null,
-    menus: decodedToken.menus ?? [],
-    token: authHeader,
+    tokenUserId: tokenAccess.id,
+    tokenRole: tokenAccess.role,
+    tokenEmail: tokenAccess.email,
+    tokenRoles: tokenAccess.roles,
+    tokenName: tokenAccess.name,
+    tokenCustomerId: tokenAccess.customerId ?? null,
+    menus: tokenAccess.menus || [],
+    warehouses: tokenAccess.warehouses || [],
+    token: req.headers['authorization'],
   };
 }
 
