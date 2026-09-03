@@ -1,6 +1,4 @@
 import jwt, { JwtPayload } from 'jsonwebtoken';
-// import cache from '@/shared-libs/utils/cache.util'; // ponytail: sementara pakai memory-cache (tanpa Redis)
-import cache from '@/utils/memory-cache.util';
 import { Request, Response, NextFunction } from 'express';
 import { HTTP_MESSAGE } from '@/shared-libs/constants/http-status.constant';
 import SecretManager from '@/shared-libs/utils/secret-manager.util';
@@ -11,9 +9,27 @@ import { basicAuthRoutes } from '@/shared-libs/constants/basic-auth.constant';
 import { driverAuthRoutes } from '@/shared-libs/constants/driver-auth.constant';
 import { customerAuthRoutes } from '@/shared-libs/constants/customer-auth.constant';
 import { noAuthRoutes } from '@/shared-libs/constants/no-auth.constant';
+import cache from '@/shared-libs/utils/cache.util';
 interface CustomJwtPayload extends JwtPayload {
   type?: string;
+  email?: string;
+  name?: string;
+  role?: string;
+  roles?: any[];
+  menus?: any[];
+  customerId?: string | null;
+  customerCode?: string | null;
+  customerName?: string | null;
+  warehouses?: { warehouseCode: string; warehouseName: string | null }[];
+  phone?: string;
+  contactId?: string;
+  cmd?: string;
+  drivervkvd?: string;
+  driverShipmentId?: string;
 }
+
+// Verifikasi JWT + session Redis: tokenBlacklist (logout/rotasi) dan
+// tokenAccess (session aktif per user — login baru menimpa yang lama).
 
 const dynamicRoutes = [/^\/v1\/register\/activation\/[^/?]+(\?.*)?$/]; // '/v1/register/activation/:token'
 
@@ -220,6 +236,7 @@ export async function VerifyJWT(
   }
 }
 
+// Identitas dari session Redis (tokenAccess) — sekaligus validasi session aktif.
 async function handleUserAuthentication(
   decodedToken: CustomJwtPayload,
   encryptedToken: string,
@@ -236,7 +253,8 @@ async function handleUserAuthentication(
     name: string;
     roles: any[];
     customerId?: string | null;
-    menus?: any[]; // Add menus to the expected structure
+    menus?: any[];
+    warehouses?: { warehouseCode: string; warehouseName: string | null }[];
   }>(`tokenAccess:${decodedToken.sub}`);
 
   if (tokenBlacklist || tokenAccess?.token !== encryptedToken) {
@@ -250,7 +268,8 @@ async function handleUserAuthentication(
     tokenRoles: tokenAccess.roles,
     tokenName: tokenAccess.name,
     tokenCustomerId: tokenAccess.customerId ?? null,
-    menus: tokenAccess.menus || [], // Include menus from cache
+    menus: tokenAccess.menus || [],
+    warehouses: tokenAccess.warehouses || [],
     token: req.headers['authorization'],
   };
 }

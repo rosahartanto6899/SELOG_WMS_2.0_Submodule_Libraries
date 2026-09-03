@@ -5,6 +5,9 @@ export interface AuthenticatedUser {
   tokenRoles: any[];
   tokenName: string;
   tokenCustomerId?: string | null;
+  tokenCustomerCode?: string | null;
+  tokenCustomerName?: string | null;
+  warehouses: { warehouseCode: string; warehouseName: string | null }[];
   menus: any[];
   token?: string | undefined;
 }
