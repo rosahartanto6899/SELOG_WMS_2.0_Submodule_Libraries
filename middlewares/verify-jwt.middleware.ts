@@ -1,4 +1,5 @@
 import jwt, { JwtPayload } from 'jsonwebtoken';
+import cache from '@/shared-libs/utils/cache.util';
 import { Request, Response, NextFunction } from 'express';
 import { HTTP_MESSAGE } from '@/shared-libs/constants/http-status.constant';
 import SecretManager from '@/shared-libs/utils/secret-manager.util';
@@ -27,9 +28,10 @@ interface CustomJwtPayload extends JwtPayload {
   driverShipmentId?: string;
 }
 
-// verifikasi JWT stateless — tanpa cache/Redis. Identitas dibaca dari
-// klaim token yang diterbitkan ServiceUser (signature diverifikasi di sini).
-// Konsekuensi: token tidak bisa dicabut sebelum expired.
+// JWT verification backed by the Redis session (LOGIS pattern): the access
+// token only carries {sub, iss, type}; identity (role, menus, warehouses,
+// customer) is read from `tokenAccess:<sub>` and matched against the sent
+// token — one active session per user, and tokens stay revocable.
 
 const dynamicRoutes = [/^\/v1\/register\/activation\/[^/?]+(\?.*)?$/]; // '/v1/register/activation/:token'
 
@@ -184,10 +186,12 @@ export async function VerifyJWT(
       token = encryptedToken;
     }
 
-    const decodedToken = jwt.verify(
-      token,
-      SecretManager.env.JWT_SECRET,
-    ) as CustomJwtPayload;
+    const [tokenBlacklist, decodedToken] = await Promise.all([
+      cache.get<{ token: string }>(`tokenBlacklist:${token}`),
+      Promise.resolve(
+        jwt.verify(token, SecretManager.env.JWT_SECRET) as CustomJwtPayload,
+      ),
+    ]);
 
     if (decodedToken.type === 'refresh') {
       return handleUnauthorizedResponse(req, res);
@@ -214,7 +218,13 @@ export async function VerifyJWT(
       return next();
     }
 
-    handleUserAuthentication(decodedToken, req);
+    await handleUserAuthentication(
+      decodedToken,
+      encryptedToken,
+      req,
+      res,
+      tokenBlacklist,
+    );
 
     next();
   } catch (error) {
@@ -223,22 +233,45 @@ export async function VerifyJWT(
   }
 }
 
-// Identitas sepenuhnya dari klaim JWT terverifikasi — tanpa lookup cache.
-function handleUserAuthentication(decodedToken: CustomJwtPayload, req: Request) {
-  const authHeader = req.headers['authorization'];
+// Identity comes from the Redis session `tokenAccess:<sub>` — the sent token
+// must match the stored one (active session), and must pass the blacklist check.
+async function handleUserAuthentication(
+  decodedToken: CustomJwtPayload,
+  encryptedToken: string,
+  req: Request,
+  res: Response,
+  tokenBlacklist: { token: string } | null,
+) {
+  const tokenAccess = await cache.get<{
+    id: string;
+    role: string;
+    email: string;
+    token: string;
+    name: string;
+    roles: any[];
+    menus?: any[];
+    customerId?: string | null;
+    customerCode?: string | null;
+    customerName?: string | null;
+    warehouses?: { warehouseCode: string; warehouseName: string | null }[];
+  }>(`tokenAccess:${decodedToken.sub}`);
+
+  if (tokenBlacklist || tokenAccess?.token !== encryptedToken) {
+    return handleUnauthorizedResponse(req, res);
+  }
 
   req.user = {
-    tokenUserId: decodedToken.sub ?? '',
-    tokenRole: decodedToken.role ?? '',
-    tokenEmail: decodedToken.email ?? '',
-    tokenRoles: decodedToken.roles ?? [],
-    tokenName: decodedToken.name ?? '',
-    tokenCustomerId: decodedToken.customerId ?? null,
-    tokenCustomerCode: decodedToken.customerCode ?? null,
-    tokenCustomerName: decodedToken.customerName ?? null,
-    warehouses: decodedToken.warehouses ?? [],
-    menus: decodedToken.menus ?? [],
-    token: authHeader,
+    tokenUserId: tokenAccess.id,
+    tokenRole: tokenAccess.role,
+    tokenEmail: tokenAccess.email,
+    tokenRoles: tokenAccess.roles,
+    tokenName: tokenAccess.name,
+    tokenCustomerId: tokenAccess.customerId ?? null,
+    tokenCustomerCode: tokenAccess.customerCode ?? null,
+    tokenCustomerName: tokenAccess.customerName ?? null,
+    warehouses: tokenAccess.warehouses ?? [],
+    menus: tokenAccess.menus ?? [],
+    token: req.headers['authorization'],
   };
 }
 
