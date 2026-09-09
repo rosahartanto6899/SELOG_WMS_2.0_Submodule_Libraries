@@ -6,6 +6,10 @@ export function getActiveCustomerId(user: any): string | null {
   return user?.tokenCustomerId ?? null;
 }
 
+export function getActiveWarehouseId(user: any): string | null {
+  return user?.tokenWarehouseId ?? null;
+}
+
 export function getAccessibleCustomerIds(user: any): string[] {
   const roles = user?.tokenRoles || [];
   return Array.from(

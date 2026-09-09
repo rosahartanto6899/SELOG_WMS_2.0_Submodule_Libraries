@@ -254,6 +254,9 @@ async function handleUserAuthentication(
     customerCode?: string | null;
     customerName?: string | null;
     warehouses?: { warehouseCode: string; warehouseName: string | null }[];
+    activeWarehouseId?: string | null;
+    activeWarehouseCode?: string | null;
+    activeWarehouseName?: string | null;
   }>(`tokenAccess:${decodedToken.sub}`);
 
   if (tokenBlacklist || tokenAccess?.token !== encryptedToken) {
@@ -269,6 +272,9 @@ async function handleUserAuthentication(
     tokenCustomerId: tokenAccess.customerId ?? null,
     tokenCustomerCode: tokenAccess.customerCode ?? null,
     tokenCustomerName: tokenAccess.customerName ?? null,
+    tokenWarehouseId: tokenAccess.activeWarehouseId ?? null,
+    tokenWarehouseCode: tokenAccess.activeWarehouseCode ?? null,
+    tokenWarehouseName: tokenAccess.activeWarehouseName ?? null,
     warehouses: tokenAccess.warehouses ?? [],
     menus: tokenAccess.menus ?? [],
     token: req.headers['authorization'],
