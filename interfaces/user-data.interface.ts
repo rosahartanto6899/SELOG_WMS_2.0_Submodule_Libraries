@@ -8,6 +8,9 @@ interface IDataUser {
   tokenCustomerId?: string | null;
   tokenCustomerCode?: string | null;
   tokenCustomerName?: string | null;
+  tokenWarehouseId?: string | null;
+  tokenWarehouseCode?: string | null;
+  tokenWarehouseName?: string | null;
   tokenRole: string;
   tokenEmail: string;
   tokenRoles: IDataUserRole[];

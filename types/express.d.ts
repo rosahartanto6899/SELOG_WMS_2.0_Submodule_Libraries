@@ -7,6 +7,9 @@ export interface AuthenticatedUser {
   tokenCustomerId?: string | null;
   tokenCustomerCode?: string | null;
   tokenCustomerName?: string | null;
+  tokenWarehouseId?: string | null;
+  tokenWarehouseCode?: string | null;
+  tokenWarehouseName?: string | null;
   warehouses: { warehouseCode: string; warehouseName: string | null }[];
   menus: any[];
   token?: string | undefined;
