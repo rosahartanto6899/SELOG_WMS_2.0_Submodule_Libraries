@@ -1,3 +1,4 @@
+import { createHash, randomUUID } from 'node:crypto';
 import { Request, Response, NextFunction } from 'express';
 import { HTTP_MESSAGE } from '@/shared-libs/constants/http-status.constant';
 import logger from '@/shared-libs/utils/logger.util';
@@ -15,12 +16,13 @@ export function ResponseJson(req: Request, res: Response, next: NextFunction) {
       res.set('Content-Type', 'application/json');
       res.status(httpCode);
 
-      const result = {
-        transactionId: '0f06b466-99dd-4f59-a5df-1ad9f2a84d0a',
+      const payload = body?.data ?? null;
+      const result: Record<string, unknown> = {
+        transactionId: randomUUID(),
         code: '',
         message: HTTP_MESSAGE[httpCode] ?? 'OK',
-        eTag: 'pfmKgK6RpIkgkAAYukTfo21KRTyCwpiA',
-        data: body?.data ? body.data : null,
+        eTag: createHash('md5').update(JSON.stringify(payload)).digest('base64'),
+        data: payload,
       };
 
       const page = body?.page ? body.page : null;

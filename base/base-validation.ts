@@ -4,7 +4,7 @@ import { UnprocessableEntityException } from '@/shared-libs/exceptions/unprocess
 import { Request, Response, NextFunction } from 'express';
 
 export function BodyValidation(
-  type: any,
+  type: new () => object,
 ): (req: Request, res: Response, next: NextFunction) => void {
   return (req: Request, _res: Response, next: NextFunction) => {
     const dtoInstance = plainToInstance(type, req.body);
@@ -51,7 +51,7 @@ export function BodyValidation(
 }
 
 export function ParamValidation(
-  type: any,
+  type: new () => object,
 ): (req: Request, res: Response, next: NextFunction) => void {
   return (req: Request, _res: Response, next: NextFunction) => {
     const dtoInstance = plainToInstance(type, req.params);
@@ -83,7 +83,7 @@ export function ParamValidation(
 }
 
 export function QueryValidation(
-  type: any,
+  type: new () => object,
 ): (req: Request, res: Response, next: NextFunction) => void {
   return (req: Request, _res: Response, next: NextFunction) => {
     // Convert objects with numeric keys to arrays BEFORE transformation
@@ -135,7 +135,12 @@ export function QueryValidation(
           }));
           return next(new UnprocessableEntityException(errorFields, 422));
         }
-        req.query = dtoInstance as any;
+        // Express 5: req.query getter-only di prototype — wajib defineProperty, bukan assignment
+        Object.defineProperty(req, 'query', {
+          value: dtoInstance,
+          writable: true,
+          configurable: true,
+        });
         next();
       })
       .catch(next);

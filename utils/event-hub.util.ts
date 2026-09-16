@@ -140,7 +140,7 @@ class EventHub {
   private constructor() {}
 
   public static getInstance(): IEventHub {
-    const eventHubHandlers = {
+    const eventHubHandlers: Record<string, () => EventHubManager> = {
       'event-hub': () => EventHubManager.getInstance(),
     };
 

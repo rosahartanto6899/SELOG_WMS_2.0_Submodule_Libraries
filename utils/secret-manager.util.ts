@@ -7,7 +7,7 @@ class SecretManager {
   private constructor() {}
 
   public static getInstance() {
-    const vaulthandlers = {
+    const vaulthandlers: Record<string, () => VaultClient> = {
       vault: () => new VaultClient(),
     };
 

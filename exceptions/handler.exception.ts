@@ -1,4 +1,5 @@
 import * as Sentry from '@sentry/node';
+import { randomUUID } from 'node:crypto';
 import { Request, Response, NextFunction } from 'express';
 import { HTTP_MESSAGE } from '@/shared-libs/constants/http-status.constant';
 import { default as SecretManager } from '@/shared-libs/utils/secret-manager.util';
@@ -98,7 +99,7 @@ export function HandlerException(
   });
 
   res.status(httpCode).json({
-    transactionId: '0f06b466-99dd-4f59-a5df-1ad9f2a84d0a',
+    transactionId: randomUUID(),
     code: '',
     data: data,
     message: message,

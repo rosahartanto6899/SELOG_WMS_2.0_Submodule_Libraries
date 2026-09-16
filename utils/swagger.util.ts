@@ -391,8 +391,8 @@ export function processSwaggerPaths(
 ): void {
   const optionsMethod = createOptionsMethod();
 
-  Object.entries(swaggerDocs.paths).forEach(
-    ([path, endpoint]: [string, SwaggerPath]) => {
+  Object.entries(swaggerDocs.paths as Record<string, SwaggerPath>).forEach(
+    ([path, endpoint]) => {
       endpoint.options = optionsMethod;
 
       const pathParams = extractPathParameters(path);
