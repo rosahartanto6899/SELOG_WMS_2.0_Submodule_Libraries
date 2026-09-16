@@ -8,7 +8,7 @@ class EmailConfig {
   private constructor() {}
 
   public static getInstance() {
-    const emailServiceHandlers = {
+    const emailServiceHandlers: Record<string, () => Microsoft365> = {
       'microsoft-365': () => new Microsoft365(),
     };
 

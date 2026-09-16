@@ -9,7 +9,7 @@ class Cache {
   private constructor() {}
 
   public static getInstance() {
-    const cacheHandlers = {
+    const cacheHandlers: Record<string, () => RedisCache> = {
       redis: () => new RedisCache(),
     };
 

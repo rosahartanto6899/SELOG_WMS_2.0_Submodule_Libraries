@@ -1,4 +1,5 @@
 ﻿import { NextFunction, Request, Response } from 'express';
+import logger from '@/shared-libs/utils/logger.util';
 
 // Simple HTML tag pattern - looks for basic HTML structure
 const htmlTagPattern = /<[a-z][^>]{0,200}>/i;
@@ -107,8 +108,13 @@ export function validateDataMiddleware(
 ): void {
   try {
     // Transform array parameters first
+    // Express 5: req.query getter-only di prototype — wajib defineProperty, bukan assignment
     if (req.query) {
-      req.query = transformArrayParams(req.query);
+      Object.defineProperty(req, 'query', {
+        value: transformArrayParams(req.query),
+        writable: true,
+        configurable: true,
+      });
     }
 
     if (req.body && typeof req.body === 'object') {
@@ -136,9 +142,9 @@ export function validateDataMiddleware(
       next();
     }
   } catch (error) {
-    if (process.env.NODE_ENV === 'development') {
-      console.error('Validation middleware error:', error);
-    }
+    logger.error(
+      `validateDataMiddleware error: ${error instanceof Error ? error.stack : String(error)}`,
+    );
 
     res.status(500).json({
       error: 'Internal Server Error',

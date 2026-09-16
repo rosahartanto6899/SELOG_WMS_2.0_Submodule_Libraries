@@ -14,11 +14,9 @@
 export const MICROSERVICE_IDENTIFIERS = {
   SERVICE_USER: 'selog.wms.user.api',
   SERVICE_MASTER_DATA: 'selog.wms.masterdata.api',
-  SERVICE_VEHICLE: 'selog.wms.vehicle.api',
-  SERVICE_DRIVER: 'selog.wms.driver.api',
-  SERVICE_ORDER: 'selog.wms.order.api',
-  SERVICE_JOURNEY: 'selog.wms.journey.api',
-  SERVICE_BILLING: 'selog.wms.billing.api',
+  SERVICE_INCOMING: 'selog.wms.incoming.api',
+  SERVICE_OUTGOING: 'selog.wms.outgoing.api',
+  SERVICE_INVENTORY_STOCK: 'selog.wms.inventorystock.api',
 
   /** Default fallback for unknown services */
   UNKNOWN: 'selog.wms.unknown.api',
