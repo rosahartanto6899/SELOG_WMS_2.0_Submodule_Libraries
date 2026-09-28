@@ -9,4 +9,11 @@ export const basicAuthRoutes: Array<{
     clientId: 'default',
     description: '/v1/materials/internal/by-code/:code',
   },
+  {
+    // m2m Basic auth SERVICE_ACCOUNT — dipakai ServiceIncoming incoming-file-processor
+    // (parity GetWarehouseFromInternalServiceAsync, ganti MasterData legacy)
+    pattern: /^\/v1\/warehouses\/internal\/all(\/)?(\?.*)?$/,
+    clientId: 'default',
+    description: '/v1/warehouses/internal/all',
+  },
 ];
