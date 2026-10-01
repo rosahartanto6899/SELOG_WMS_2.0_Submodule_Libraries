@@ -16,4 +16,11 @@ export const basicAuthRoutes: Array<{
     clientId: 'default',
     description: '/v1/warehouses/internal/all',
   },
+  {
+    // m2m Basic auth — guard stop-transaction binning (ServiceIncoming)
+    // & picking (ServiceOutgoing)
+    pattern: /^\/v1\/warehouses\/internal\/stop-transaction\/[^/?]+(\/)?(\?.*)?$/,
+    clientId: 'default',
+    description: '/v1/warehouses/internal/stop-transaction/:code',
+  },
 ];
